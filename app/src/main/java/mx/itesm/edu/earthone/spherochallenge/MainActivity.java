@@ -290,7 +290,7 @@ public class MainActivity extends Activity implements RobotChangedStateListener,
                     if (result.get(0).equalsIgnoreCase("adelante")){
                         direction = 180;
                         convenienceRobot.drive(direction, ROBOT_SPEED);
-                    } else if (result.get(0).equalsIgnoreCase("zigzag")){
+                    } else if (result.get(0).equalsIgnoreCase("zigzag")|| result.get(0).equalsIgnoreCase("zigzag") ){
                         for (int i = 0; i<5;i++){
                             convenienceRobot.setLed(0.5f,0.5f,0.5f);
                             direction = 90;
