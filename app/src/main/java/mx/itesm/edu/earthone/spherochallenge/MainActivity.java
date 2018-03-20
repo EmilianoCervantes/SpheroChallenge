@@ -2,12 +2,18 @@ package mx.itesm.edu.earthone.spherochallenge;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
 
 import com.orbotix.ConvenienceRobot;
@@ -21,10 +27,21 @@ import com.orbotix.common.internal.DeviceResponse;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-public class MainActivity extends Activity implements RobotChangedStateListener, ResponseListener {
+public class MainActivity extends Activity implements RobotChangedStateListener, ResponseListener, TextToSpeech.OnInitListener {
 
     private Button go, stop, left, right, back;
+
+    ///PARTE TEXT TO SPEECH
+    private Button message;
+    private TextView textView;
+    private EditText editText;
+    private TextToSpeech textToSpeech = null;
+    private final int CHECK_TTS = 1000;
+    private final int CHECK_STT = 1007;
+    //SPEECH TO TEXT
+    private Button bListen;
 
     //Pedir permiso del sphero
     private final int REQUEST_PERMISSION = 42;    //Pedir permiso
@@ -42,7 +59,65 @@ public class MainActivity extends Activity implements RobotChangedStateListener,
         go = (Button) findViewById(R.id.go);
         stop = (Button) findViewById(R.id.stop);
 
+        ///
+        /// PARTE TEXT TO VOICE
+        ///
+        message = (Button)findViewById(R.id.enviar);
+        editText = (EditText)findViewById(R.id.editText);
+        message.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String text = editText.getText().toString();
+                talkToMe(text, 1);
+                if(text.equalsIgnoreCase("adelante")){
+                    direction = 180;
+                    convenienceRobot.drive(direction, ROBOT_SPEED);
+                } else if (text.equalsIgnoreCase("zigzag")){
+                    for (int i = 0; i<5;i++){
+                        convenienceRobot.setLed(0.5f,0.5f,0.5f);
+                        direction = 90;
+                        convenienceRobot.drive(direction, ROBOT_SPEED);
+                        direction = 270;
+                        convenienceRobot.drive(direction, ROBOT_SPEED);
+                    }
+                    convenienceRobot.drive(direction, ROBOT_SPEED);
+                } else if (text.equalsIgnoreCase("vuelta")){
+                    direction = 180;
+                    convenienceRobot.drive(direction, ROBOT_SPEED);
+                } else{
+                    convenienceRobot.setLed(1.0f,0.0f,0.0f);
+                    convenienceRobot.stop();
+                }
+            }
+        });
 
+        ///
+        ///PARTE VOICE TO TEXT
+        ///
+        textView = (TextView)findViewById(R.id.textoPorVoz);
+        bListen = (Button)findViewById(R.id.ingresaVoz);
+        bListen.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                if(intent.resolveActivity(getPackageManager()) != null){
+                    startActivityForResult(intent, CHECK_STT);
+                }else{
+                    Toast.makeText(getApplicationContext(), "You do not have Speech To Text", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        Intent ttsIntent = new Intent();
+        ttsIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+        startActivityForResult(ttsIntent, CHECK_TTS);
+
+
+        ///
+        //BUTTONS SPHERO
+        ///
         go.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -189,5 +264,79 @@ public class MainActivity extends Activity implements RobotChangedStateListener,
         }
 
         super.onStop();
+    }
+
+    ///
+    /// METHODS PARA TEXT TO SPEECH
+    ///
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode){
+            //TTS = Text to Speech
+            case CHECK_TTS:
+                if (resultCode == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+                    textToSpeech = new TextToSpeech(this, this);
+                } else {
+
+                    Intent installIntent = new Intent();
+                    installIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                    startActivity(installIntent);
+                }
+                break;
+            //STT Speech to Text
+            case CHECK_STT:
+                if(resultCode == RESULT_OK && data != null){
+                    ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    if (result.get(0).equalsIgnoreCase("adelante")){
+                        direction = 180;
+                        convenienceRobot.drive(direction, ROBOT_SPEED);
+                    } else if (result.get(0).equalsIgnoreCase("zigzag")){
+                        for (int i = 0; i<5;i++){
+                            convenienceRobot.setLed(0.5f,0.5f,0.5f);
+                            direction = 90;
+                            convenienceRobot.drive(direction, ROBOT_SPEED);
+                            direction = 270;
+                            convenienceRobot.drive(direction, ROBOT_SPEED);
+                        }
+                    }else {
+                        convenienceRobot.setLed(1.0f,0.0f,0.0f);
+                        convenienceRobot.stop();
+                    }
+                    textView.setText(result.get(0));
+                }
+                break;
+        }
+    }
+    @Override
+    public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            if (textToSpeech != null) {
+                int result = textToSpeech.setLanguage(Locale.getDefault());
+                if (result == TextToSpeech.LANG_MISSING_DATA ||
+                        result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Toast.makeText(this, "TTS language is not supported", Toast.LENGTH_LONG).show();
+                } else {
+                    talkToMe("TTS is ready", 0);
+                }
+            }
+        } else {
+            Toast.makeText(this, "TTS initialization failed",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+        super.onDestroy();
+    }
+
+    private void talkToMe(String text, int qmode) {
+        if (qmode == 1)
+            textToSpeech.speak(text, TextToSpeech.QUEUE_ADD, null);
+        else
+            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null);
     }
 }

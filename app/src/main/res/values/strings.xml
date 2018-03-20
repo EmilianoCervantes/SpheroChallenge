@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">SpheroChallenge</string>
+    <string name="left">Izquierda</string>
+    <string name="right">Derecha</string>
+    <string name="back">Atrás</string>
+    <string name="send">Enviar mensaje</string>
+    <string name="forward">Adelante</string>
+    <string name="Hablar" />
+    <string name="speak">Hablar</string>
 </resources>
