@@ -82,8 +82,10 @@ public class MainActivity extends Activity implements RobotChangedStateListener,
                     }
                     convenienceRobot.drive(direction, ROBOT_SPEED);
                 } else if (text.equalsIgnoreCase("vuelta")){
-                    direction = 180;
-                    convenienceRobot.drive(direction, ROBOT_SPEED);
+                    for(int i = 0; i<360;i++){
+                        direction = i;
+                        convenienceRobot.drive(direction, ROBOT_SPEED);
+                    }
                 } else{
                     convenienceRobot.setLed(1.0f,0.0f,0.0f);
                     convenienceRobot.stop();
@@ -298,7 +300,12 @@ public class MainActivity extends Activity implements RobotChangedStateListener,
                             direction = 270;
                             convenienceRobot.drive(direction, ROBOT_SPEED);
                         }
-                    }else {
+                    } else if(result.get(0).equalsIgnoreCase("vuelta")|| result.get(0).equalsIgnoreCase("gira") ){
+                        for(int i = 0; i<360;i++){
+                            direction = i;
+                            convenienceRobot.drive(direction, ROBOT_SPEED);
+                        }
+                    } else {
                         convenienceRobot.setLed(1.0f,0.0f,0.0f);
                         convenienceRobot.stop();
                     }
